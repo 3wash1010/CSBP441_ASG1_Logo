@@ -1,0 +1,45 @@
+!pip install -q opencv-python-headless
+
+import cv2
+import numpy as np
+from google.colab.patches import cv2_imshow
+
+# ========== Settings ==========
+W, H = 400, 400               # Canvas size
+BG = (247, 247, 247)          # Light Gray background
+IBM_BLUE = (187, 108, 30)     # IBM blue (BGR)
+TEXT = "IBM"
+FONT = cv2.FONT_HERSHEY_TRIPLEX
+FONT_SCALE = 6.0
+THICK = 15                    # Text thickness (bigger = clearer)
+N_STRIPES = 20                # Number of stripes (more = thinner)
+# ==============================
+
+# 1) Create a background
+canvas = np.full((H, W, 3), BG, dtype=np.uint8)
+
+# 2) Create a text mask
+mask = np.zeros((H, W), dtype=np.uint8)
+(text_w, text_h), base = cv2.getTextSize(TEXT, FONT, FONT_SCALE, THICK)
+x = (W - text_w) // 2
+y = (H + text_h) // 2 - base // 2
+cv2.putText(mask, TEXT, (x, y), FONT, FONT_SCALE, 255, THICK, cv2.LINE_AA)
+
+# 3) Draw blue stripes (thinner)
+stripe_h = H // (2 * N_STRIPES)        # Height of each small stripe
+stripes = np.full_like(canvas, BG)     # Gray background instead of black
+for i in range(N_STRIPES):
+    y0 = i * 2 * stripe_h
+    y1 = y0 + stripe_h
+    cv2.rectangle(stripes, (0, y0), (W, y1), IBM_BLUE, cv2.FILLED)
+
+# 4) Keep stripes inside the text only
+striped_letters = cv2.bitwise_and(stripes, stripes, mask=mask)
+
+# 5) Merge stripes onto the background
+final = canvas.copy()
+final[mask > 0] = striped_letters[mask > 0]
+
+# Show the result
+cv2_imshow(final)
+cv2.imwrite("ibm_logo_clean.png", final)
